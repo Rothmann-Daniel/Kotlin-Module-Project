@@ -6,18 +6,39 @@ class MenuApp : InterfaceManager {
     private val archives: MutableList<Archive> = mutableListOf()
     private val scanner = Scanner(System.`in`)
 
+    // Вспомогательные методы для проверки индексов
+    private fun isValidArchiveIndex(index: Int): Boolean {
+        return index in archives.indices
+    }
+
+    private fun isValidNoteIndex(archive: Archive, noteIndex: Int): Boolean {
+        return noteIndex in archive.notes.indices
+    }
+
+    // Вспомогательные методы для ввода данных
+    private fun readNonEmptyInput(comment: String): String? {
+        println(comment)
+        return readlnOrNull()?.trim().takeIf { !it.isNullOrEmpty() }
+    }
+
+    private fun readNonBlankInput(comment: String): String? {
+        println(comment)
+        return readlnOrNull()?.trim().takeIf { !it.isNullOrBlank() }
+    }
+
     override fun createArchive() {
-        println("Введите имя архива:")
-        val name = readlnOrNull()?.trim()
-        if (name.isNullOrEmpty()) {
-            println("Имя архива не может быть пустым.")
-        } else {
-            archives.add(Archive(name))
-            println("Архив '$name' создан.")
-        }
+        val name = readNonEmptyInput("Введите имя архива:")
+            ?: println("Имя архива не может быть пустым.").run { return }
+        archives.add(Archive(name))
+        println("Архив '$name' создан.")
     }
 
     override fun selectArchive(index: Int) {
+        if (!isValidArchiveIndex(index)) {
+            println("Ошибка: Архив с индексом $index не найден.")
+            return
+        }
+
         val selectedArchive = archives[index]
         while (true) {
             println("Выбор заметки в архиве '${selectedArchive.name}':")
@@ -45,7 +66,7 @@ class MenuApp : InterfaceManager {
                         2 -> deletedNote(index, choice - 1)
                         3 -> editNoteTitle(selectedArchive, choice - 1)
                         4 -> editNoteDescription(selectedArchive, choice - 1)
-                        5-> return
+                        5 -> return
                         else -> println("Неверный ввод, попробуйте снова.")
                     }
                 }
@@ -62,19 +83,11 @@ class MenuApp : InterfaceManager {
     }
 
     override fun createNote(archive: Archive) {
-        println("Введите заголовок для заметки:")
-        val title = readlnOrNull()?.trim()
-        if (title.isNullOrEmpty()) {
-            println("Ошибка: Заголовок не может быть пустым.")
-            return
-        }
+        val title = readNonEmptyInput("Введите заголовок для заметки:")
+            ?: println("Ошибка: Заголовок не может быть пустым.").run { return }
 
-        println("Введите описание:")
-        val description = readlnOrNull()?.trim()
-        if (description.isNullOrBlank()) {
-            println("Ошибка: Описание не может быть пустым или состоять только из пробелов.")
-            return
-        }
+        val description = readNonBlankInput("Введите описание:")
+            ?: println("Ошибка: Описание не может быть пустым или состоять только из пробелов.").run { return }
 
         val time = LocalDate.now()
         archive.notes.add(Note(title, description, time))
@@ -96,81 +109,79 @@ class MenuApp : InterfaceManager {
     }
 
     override fun removeAllNotes(archiveIndex: Int) {
-        if (archiveIndex in archives.indices) {
-            val archive = archives[archiveIndex]
-            archive.notes.clear()
-            println("Все заметки в архиве '${archive.name}' удалены.")
-        } else {
+        if (!isValidArchiveIndex(archiveIndex)) {
             println("Ошибка: Архив с индексом $archiveIndex не найден.")
+            return
         }
+
+        val archive = archives[archiveIndex]
+        archive.notes.clear()
+        println("Все заметки в архиве '${archive.name}' удалены.")
     }
 
     override fun deletedArchive(index: Int) {
-        if (index in archives.indices) {
-            val removedArchive = archives.removeAt(index)
-            println("Архив '${removedArchive.name}' удален.")
-        } else {
+        if (!isValidArchiveIndex(index)) {
             println("Ошибка: Архив с индексом $index не найден.")
+            return
         }
+
+        val removedArchive = archives.removeAt(index)
+        println("Архив '${removedArchive.name}' удален.")
     }
 
     override fun deletedNote(archiveIndex: Int, noteIndex: Int) {
-        if (archiveIndex in archives.indices) {
-            val archive = archives[archiveIndex]
-            if (noteIndex in archive.notes.indices) {
-                val note = archive.notes.removeAt(noteIndex)
-                println("Заметка '${note.title}' удалена из архива '${archive.name}'.")
-            } else {
-                println("Ошибка: Заметка с индексом $noteIndex не найдена.")
-            }
-        } else {
+        if (!isValidArchiveIndex(archiveIndex)) {
             println("Ошибка: Архив с индексом $archiveIndex не найден.")
+            return
         }
+
+        val archive = archives[archiveIndex]
+        if (!isValidNoteIndex(archive, noteIndex)) {
+            println("Ошибка: Заметка с индексом $noteIndex не найдена.")
+            return
+        }
+
+        val note = archive.notes.removeAt(noteIndex)
+        println("Заметка '${note.title}' удалена из архива '${archive.name}'.")
     }
 
     override fun editNoteTitle(archive: Archive, noteIndex: Int) {
-        if (noteIndex in archive.notes.indices) {
-            println("Введите новый заголовок для заметки:")
-            val newTitle = readlnOrNull()?.trim()
-            if (newTitle.isNullOrEmpty()) {
-                println("Ошибка: Заголовок не может быть пустым.")
-            } else {
-                archive.notes[noteIndex].title = newTitle
-                println("Заголовок заметки изменен на '$newTitle'.")
-            }
-        } else {
+        if (!isValidNoteIndex(archive, noteIndex)) {
             println("Ошибка: Заметка с индексом $noteIndex не найдена.")
+            return
         }
+
+        val newTitle = readNonEmptyInput("Введите новый заголовок для заметки:")
+            ?: println("Ошибка: Заголовок не может быть пустым.").run { return }
+
+        archive.notes[noteIndex].title = newTitle
+        println("Заголовок заметки изменен на '$newTitle'.")
     }
 
     override fun editNoteDescription(archive: Archive, noteIndex: Int) {
-        if (noteIndex in archive.notes.indices) {
-            println("Введите новое описание для заметки:")
-            val newDescription = readlnOrNull()?.trim()
-            if (newDescription.isNullOrBlank()) {
-                println("Ошибка: Описание не может быть пустым или состоять только из пробелов.")
-            } else {
-                archive.notes[noteIndex].description = newDescription
-                println("Описание заметки изменено.")
-            }
-        } else {
+        if (!isValidNoteIndex(archive, noteIndex)) {
             println("Ошибка: Заметка с индексом $noteIndex не найдена.")
+            return
         }
+
+        val newDescription = readNonBlankInput("Введите новое описание для заметки:")
+            ?: println("Ошибка: Описание не может быть пустым или состоять только из пробелов.").run { return }
+
+        archive.notes[noteIndex].description = newDescription
+        println("Описание заметки изменено.")
     }
 
     override fun editArchiveName(archiveIndex: Int) {
-        if (archiveIndex in archives.indices) {
-            println("Введите новое имя для архива:")
-            val newName = readlnOrNull()?.trim()
-            if (newName.isNullOrEmpty()) {
-                println("Ошибка: Имя архива не может быть пустым.")
-            } else {
-                archives[archiveIndex].name = newName
-                println("Имя архива изменено на '$newName'.")
-            }
-        } else {
+        if (!isValidArchiveIndex(archiveIndex)) {
             println("Ошибка: Архив с индексом $archiveIndex не найден.")
+            return
         }
+
+        val newName = readNonEmptyInput("Введите новое имя для архива:")
+            ?: println("Ошибка: Имя архива не может быть пустым.").run { return }
+
+        archives[archiveIndex].name = newName
+        println("Имя архива изменено на '$newName'.")
     }
 
     private fun readInput(): Int {
@@ -210,7 +221,8 @@ class MenuApp : InterfaceManager {
                 archives.size + 2 -> {
                     println("Спасибо за использование приложения! До свидания!")
                     return
-                }else -> println("Неверный ввод, попробуйте снова.")
+                }
+                else -> println("Неверный ввод, попробуйте снова.")
             }
         }
     }
