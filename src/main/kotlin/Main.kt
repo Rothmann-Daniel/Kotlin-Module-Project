@@ -1,3 +1,6 @@
-fun main(args: Array<String>) {
-    println("Hello World!")
+fun main() {
+    //test app
+    println("Hello reviewer!")
+    val app = MenuApp()
+    app.start()
 }
